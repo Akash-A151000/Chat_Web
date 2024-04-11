@@ -1,4 +1,3 @@
-const { userSockets } = require('../socket');
 const User = require('../models/User');
 const Message = require('../models/Message');
 const Chat = require('../models/Chat');
@@ -75,6 +74,32 @@ const createMessage = async (req, res) => {
   }
 };
 
+const createMessageFiles = async (req, res) => {
+  try {
+    const uploadedFile = req.file;
+    const { sender, recipient, content, file } = req.body;
+    const newMessage = new Message({
+      sender,
+      recipient,
+      content,
+      file,
+      isFile: true,
+    });
+    const savedMessage = await newMessage.save();
+    const recipientSocketId = getReceiverSocketId(recipient);
+    if (recipientSocketId) {
+      io.to(recipientSocketId).emit('receive-message', savedMessage);
+    } else {
+      console.log(`Recipient with ID ${recipient} is not connected.`);
+    }
+
+    res.status(201).json({ message: newMessage });
+  } catch (error) {
+    console.error('Error creating messages:', error);
+    res.status(500).json({ success: false, error: 'Internal Server Error' });
+  }
+};
+
 const getMessages = async (req, res) => {
   try {
     const { senderId, recipientId } = req.query;
@@ -146,6 +171,7 @@ const getChats = async (req, res) => {
 module.exports = {
   onlineUsers,
   createMessage,
+  createMessageFiles,
   getMessages,
   toggleOnline,
   createChat,

@@ -1,10 +1,10 @@
 const chatRoutes = require('./routes/chatRoute');
 const userRoutes = require('./routes/userRoutes');
 const dotenv = require('dotenv');
+const multer = require('multer');
 const path = require('path');
-const User = require('./models/User');
-const Chat = require('./models/Chat');
-const Message = require('./models/Message');
+const { createMessageFiles } = require('./controllers/chatController');
+const { fileURLToPath } = require('url');
 
 const { app, server, express } = require('./socket');
 
@@ -18,6 +18,23 @@ app.use(cors());
 app.use('/public', express.static(path.join(__dirname, 'public')));
 dotenv.config();
 connectDb();
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'public/assets/upload');
+  },
+  filename: function (req, file, cb) {
+    cb(null, file.originalname);
+  },
+});
+
+const upload = multer({ storage });
+
+app.post(
+  '/users/messages/file',
+  upload.single('selectedfile'),
+  createMessageFiles
+);
 
 app.use('/auth', userRoutes);
 app.use('/users', chatRoutes);
